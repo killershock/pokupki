@@ -1,0 +1,409 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Покупки</title>
+<meta name="description" content="Список покупок голосом: сказал «молоко, хлеб, сыр» — три пункта в списке." />
+<meta name="theme-color" content="#f7f2e8" />
+<meta name="color-scheme" content="light" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="icon" href="./icons/favicon-32.png" sizes="32x32" />
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-title" content="Покупки" />
+<style>
+  :root {
+    --paper: #f7f2e8;
+    --panel: #fffaf1;
+    --ink: #241c14;
+    --ink-soft: #5c4a36;
+    --muted: #9a8871;
+    --line: #cbb9a2;
+    --line-soft: #e2d7c5;
+    --accent: #b4472e;
+    --accent-ink: #fff8f1;
+    --done: #8fbf9f;
+    --serif: Georgia, "Times New Roman", serif;
+    --sans: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; min-height: 100%; }
+  body {
+    background:
+      radial-gradient(120% 70% at 100% 0%, rgba(180,71,46,.05), transparent 58%),
+      radial-gradient(90% 60% at 0% 0%, rgba(120,96,60,.05), transparent 55%),
+      var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior-y: none;
+  }
+  button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+  .app { max-width: 520px; margin: 0 auto; padding: 0 22px calc(170px + var(--safe-bottom)); min-height: 100dvh; }
+  .is-hidden { display: none !important; }
+
+  .topbar { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding: 28px 0 0; }
+  .kicker { font-size: 10.5px; letter-spacing: 1.7px; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 5px 0 0; font-family: var(--serif); font-weight: 400; font-size: 30px; letter-spacing: -.4px; }
+  .share-btn { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-size: 12px; border-bottom: 1px dashed var(--line); padding-bottom: 3px; margin-bottom: 4px; }
+
+  .counts { display: flex; gap: 18px; margin: 18px 0 4px; font-size: 12px; color: var(--muted); }
+  .counts b { font-family: var(--serif); font-weight: 400; font-size: 17px; color: var(--ink); margin-left: 4px; }
+  .rule { border: 0; border-top: 1px dashed var(--line); margin: 14px 0 8px; }
+
+  .list { list-style: none; margin: 0; padding: 0; }
+  .item {
+    display: grid; grid-template-columns: 26px 1fr 28px; gap: 12px; align-items: center;
+    padding: 13px 0; border-bottom: 1px dotted var(--line-soft);
+  }
+  .check {
+    width: 22px; height: 22px; border: 1px solid var(--line); border-radius: 50%;
+    display: grid; place-items: center; color: transparent; transition: background .18s, border-color .18s, color .18s;
+  }
+  .item.done .check { background: var(--done); border-color: var(--done); color: #1d3a2a; }
+  .item-text { font-family: var(--serif); font-size: 16.5px; line-height: 1.25; transition: color .2s; }
+  .item-qty { font-family: var(--sans); font-size: 11.5px; color: var(--muted); margin-left: 6px; }
+  .item.done .item-text { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--line); }
+  .item-del { color: var(--muted); opacity: .4; display: flex; justify-content: flex-end; }
+  .item-del:active { opacity: 1; color: var(--accent); }
+
+  .empty { text-align: center; padding: 44px 8px 10px; }
+  .empty h2 { margin: 0; font-family: var(--serif); font-weight: 400; font-size: 19px; }
+  .empty p { margin: 8px auto 18px; max-width: 290px; font-size: 12.5px; line-height: 1.55; color: var(--ink-soft); }
+  .examples { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .example { border: 1px dashed var(--line); color: var(--ink-soft); font-size: 11.5px; padding: 7px 11px; border-radius: 4px; }
+
+  .clear-done { display: block; margin: 22px auto 0; font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); border-bottom: 1px dashed var(--line); padding-bottom: 3px; }
+
+  .composer {
+    position: fixed; left: 0; right: 0; bottom: 0; max-width: 520px; margin: 0 auto;
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 22px calc(16px + var(--safe-bottom));
+    background: linear-gradient(180deg, rgba(247,242,232,0) 0%, var(--paper) 46%);
+  }
+  .composer input {
+    flex: 1; min-width: 0; border: 0; border-bottom: 1px solid var(--line); background: transparent;
+    padding: 10px 2px; font-size: 13.5px; font-style: italic; outline: none;
+  }
+  .composer input::placeholder { color: var(--muted); font-style: italic; }
+  .mic {
+    flex: 0 0 56px; width: 56px; height: 56px; border-radius: 50%;
+    background: var(--accent); color: var(--accent-ink); display: grid; place-items: center;
+    box-shadow: 0 10px 22px rgba(180,71,46,.26); touch-action: none; user-select: none;
+  }
+  .mic.listening { transform: scale(.94); box-shadow: 0 6px 16px rgba(180,71,46,.42), 0 0 0 8px rgba(180,71,46,.1); }
+
+  .overlay {
+    position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 22px;
+    background: rgba(36,28,20,.42); backdrop-filter: blur(6px);
+  }
+  .listen-card { width: 100%; max-width: 320px; text-align: center; background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 28px 22px 20px; box-shadow: 0 24px 50px rgba(36,28,20,.24); }
+  .orb { width: 84px; height: 84px; margin: 0 auto 16px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; }
+  .listen-title { margin: 0; font-family: var(--serif); font-size: 18px; }
+  .listen-text { margin: 8px 0 18px; min-height: 38px; font-size: 13px; color: var(--ink-soft); line-height: 1.5; }
+  .listen-actions { display: flex; gap: 10px; }
+  .btn { flex: 1; padding: 12px 14px; font-size: 12px; letter-spacing: .7px; text-transform: uppercase; border: 1px solid var(--line); border-radius: 4px; }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(120px + var(--safe-bottom)); transform: translateX(-50%); z-index: 60;
+    max-width: min(440px, calc(100vw - 40px)); padding: 11px 15px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 6px; box-shadow: 0 14px 30px rgba(36,28,20,.18);
+    font-size: 12.5px; line-height: 1.45; text-align: center;
+  }
+
+  @media (prefers-reduced-motion: reduce) { * { transition-duration: .001ms !important; animation-duration: .001ms !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div>
+      <div class="kicker" id="today">сегодня</div>
+      <h1>Покупки</h1>
+    </div>
+    <button class="share-btn" id="share" type="button">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8.4 7.6 12 4l3.6 3.6"/><path d="M5 13v6.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V13"/></svg>
+      Отправить
+    </button>
+  </header>
+
+  <div class="counts">
+    <span>осталось<b id="left-count">0</b></span>
+    <span>куплено<b id="done-count">0</b></span>
+  </div>
+  <hr class="rule" />
+
+  <ul class="list" id="list"></ul>
+
+  <div class="empty" id="empty">
+    <h2>Что купить?</h2>
+    <p>Скажи списком: «молоко, хлеб, сыр». Можно с количеством: «картошка 2 кг».</p>
+    <div class="examples" id="examples"></div>
+  </div>
+
+  <button class="clear-done is-hidden" id="clear-done" type="button">убрать купленное</button>
+</div>
+
+<div class="composer">
+  <input id="input" type="text" placeholder="молоко, хлеб, сыр…" autocomplete="off" aria-label="Что купить" />
+  <button class="mic" id="mic" type="button" aria-label="Сказать голосом">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.6" width="6" height="11" rx="3"/><path d="M5.6 11a6.4 6.4 0 0 0 12.8 0"/><path d="M12 17.4v3.2"/></svg>
+  </button>
+</div>
+
+<div class="overlay is-hidden" id="overlay">
+  <div class="listen-card">
+    <div class="orb">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2.6" width="6" height="11" rx="3"/><path d="M5.6 11a6.4 6.4 0 0 0 12.8 0"/><path d="M12 17.4v3.2"/></svg>
+    </div>
+    <p class="listen-title" id="listen-title">Говорите…</p>
+    <p class="listen-text" id="listen-text">Например: «молоко, хлеб, сыр»</p>
+    <div class="listen-actions">
+      <button class="btn" id="cancel" type="button">Отмена</button>
+      <button class="btn primary" id="done" type="button">Готово</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast is-hidden" id="toast"></div>
+
+<script>
+(() => {
+  'use strict';
+  const KEY = 'pokupki.v1';
+  const EXAMPLES = ['молоко, хлеб, сыр', 'картошка 2 кг', 'яйца, масло, чай'];
+
+  const $ = (s) => document.querySelector(s);
+  const listEl = $('#list');
+  const emptyEl = $('#empty');
+  const inputEl = $('#input');
+  const toastEl = $('#toast');
+  const overlay = $('#overlay');
+  const micBtn = $('#mic');
+
+  let items = load();
+  let toastTimer = null;
+
+  // ---------- хранение ----------
+  function load() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(KEY) || 'null');
+      return Array.isArray(raw && raw.items) ? raw.items : [];
+    } catch (e) { return []; }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify({ items })); } catch (e) {}
+  }
+
+  // ---------- разбор фразы ----------
+  const STOP_WORDS = new Set(['купить', 'надо', 'нужно', 'ещё', 'еще', 'пожалуйста', 'добавь', 'добавить', 'в', 'список']);
+  const QTY = /^(.*?)\s+(\d+(?:[.,]\d+)?)\s*(кг|г|гр|грамм|л|мл|шт|штук[аи]?|уп|упак[а-я]*|пач[а-я]*|бутыл[а-я]*|банк[а-я]*|пакет[а-я]*)$/i;
+
+  function parseItems(raw) {
+    const text = String(raw || '').replace(/ё/g, 'е').replace(/[.!?]+$/g, '');
+    return text
+      .split(/[,;\n]+|\s+и\s+|\s+плюс\s+/gi)
+      .map((part) => part
+        .split(/\s+/)
+        .filter((word) => word && !STOP_WORDS.has(word.toLowerCase()))
+        .join(' ')
+        .trim())
+      .filter(Boolean)
+      .map((part) => {
+        const match = part.match(QTY);
+        if (match) return { text: match[1].trim(), qty: `${match[2]} ${match[3].toLowerCase()}` };
+        return { text: part, qty: '' };
+      })
+      .filter((item) => item.text.length > 1)
+      .map((item) => ({
+        id: Date.now() + '-' + Math.random().toString(36).slice(2, 7),
+        text: item.text.charAt(0).toUpperCase() + item.text.slice(1),
+        qty: item.qty,
+        done: false,
+        ts: Date.now(),
+      }));
+  }
+
+  // ---------- иконки (нарисованы вручную) ----------
+  const ICON_CHECK = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.6 4.6L19 7.6"/></svg>';
+  const ICON_X = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+
+  // ---------- рисование ----------
+  function render() {
+    const open = items.filter((i) => !i.done);
+    const done = items.filter((i) => i.done);
+    const ordered = open.concat(done);
+
+    listEl.innerHTML = ordered.map((item) => `
+      <li class="item${item.done ? ' done' : ''}" data-id="${item.id}">
+        <button class="check" type="button" data-toggle="${item.id}" aria-label="Отметить">${ICON_CHECK}</button>
+        <div class="item-text">${escapeHtml(item.text)}${item.qty ? `<span class="item-qty">${escapeHtml(item.qty)}</span>` : ''}</div>
+        <button class="item-del" type="button" data-del="${item.id}" aria-label="Удалить">${ICON_X}</button>
+      </li>`).join('');
+
+    emptyEl.classList.toggle('is-hidden', items.length > 0);
+    $('#left-count').textContent = String(open.length);
+    $('#done-count').textContent = String(done.length);
+    $('#clear-done').classList.toggle('is-hidden', done.length === 0);
+    $('#today').textContent = 'сегодня, ' + new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    save();
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function toast(text) {
+    toastEl.textContent = text;
+    toastEl.classList.remove('is-hidden');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.add('is-hidden'), 2600);
+  }
+
+  // ---------- действия ----------
+  function addItems(raw) {
+    const parsed = parseItems(raw);
+    if (!parsed.length) {
+      toast('Не расслышал — напиши словами');
+      return;
+    }
+    items = items.concat(parsed);
+    render();
+    toast(parsed.length === 1 ? `Добавил: ${parsed[0].text}` : `Добавил ${parsed.length} пункта`);
+  }
+
+  listEl.addEventListener('click', (event) => {
+    const toggle = event.target.closest('[data-toggle]');
+    if (toggle) {
+      const item = items.find((i) => i.id === toggle.dataset.toggle);
+      if (item) { item.done = !item.done; render(); }
+      return;
+    }
+    const del = event.target.closest('[data-del]');
+    if (del) {
+      items = items.filter((i) => i.id !== del.dataset.del);
+      render();
+    }
+  });
+
+  $('#clear-done').addEventListener('click', () => {
+    items = items.filter((i) => !i.done);
+    render();
+    toast('Убрал купленное');
+  });
+
+  inputEl.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    const value = inputEl.value.trim();
+    if (!value) return;
+    inputEl.value = '';
+    addItems(value);
+  });
+
+  $('#share').addEventListener('click', async () => {
+    const open = items.filter((i) => !i.done);
+    if (!open.length) { toast('Список пуст'); return; }
+    const text = 'Покупки:\n' + open.map((i) => `— ${i.text}${i.qty ? ' ' + i.qty : ''}`).join('\n');
+    try {
+      if (navigator.share) { await navigator.share({ title: 'Покупки', text }); return; }
+      await navigator.clipboard.writeText(text);
+      toast('Список скопирован — вставляй в сообщение');
+    } catch (e) {
+      try { await navigator.clipboard.writeText(text); toast('Список скопирован'); } catch (e2) { toast(text); }
+    }
+  });
+
+  // ---------- голос ----------
+  let recognition = null;
+  let listening = false;
+  let transcript = '';
+  let micError = '';
+
+  function ensureRecognition() {
+    const Ctor = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!Ctor) return null;
+    if (recognition) return recognition;
+    recognition = new Ctor();
+    recognition.lang = 'ru-RU';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.onresult = (event) => {
+      let interim = '';
+      let final = '';
+      for (let i = event.resultIndex; i < event.results.length; i += 1) {
+        const result = event.results[i];
+        if (result.isFinal) final += result[0].transcript;
+        else interim += result[0].transcript;
+      }
+      if (final) transcript = (transcript + ' ' + final).trim();
+      $('#listen-text').textContent = transcript || interim || 'Например: «молоко, хлеб, сыр»';
+    };
+    recognition.onerror = (event) => { micError = event.error || 'unknown'; };
+    recognition.onend = () => finish();
+    return recognition;
+  }
+
+  function start() {
+    if (listening) return;
+    if (!ensureRecognition()) {
+      toast('Safari не умеет слушать — напиши словами');
+      inputEl.focus();
+      return;
+    }
+    transcript = '';
+    micError = '';
+    listening = true;
+    micBtn.classList.add('listening');
+    overlay.classList.remove('is-hidden');
+    $('#listen-title').textContent = 'Говорите…';
+    $('#listen-text').textContent = 'Например: «молоко, хлеб, сыр»';
+    try { recognition.start(); } catch (e) { finish(); }
+  }
+
+  function stop() {
+    if (!listening) return;
+    try { recognition.stop(); } catch (e) { finish(); }
+  }
+
+  function finish() {
+    if (!listening) return;
+    listening = false;
+    micBtn.classList.remove('listening');
+    overlay.classList.add('is-hidden');
+    const text = transcript.trim();
+    transcript = '';
+    if (!text) {
+      if (micError === 'not-allowed' || micError === 'service-not-allowed') toast('Разреши микрофон в настройках Safari');
+      else if (micError !== 'aborted') toast('Не расслышал — попробуй ещё раз');
+      return;
+    }
+    addItems(text);
+  }
+
+  micBtn.addEventListener('pointerdown', (event) => { event.preventDefault(); start(); });
+  for (const type of ['pointerup', 'pointercancel', 'pointerleave']) micBtn.addEventListener(type, stop);
+  $('#done').addEventListener('click', stop);
+  $('#cancel').addEventListener('click', () => { micError = 'aborted'; transcript = ''; stop(); });
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && listening) { micError = 'aborted'; stop(); } });
+
+  // ---------- примеры и запуск ----------
+  $('#examples').innerHTML = EXAMPLES.map((phrase) => `<button class="example" type="button" data-phrase="${phrase}">${phrase}</button>`).join('');
+  $('#examples').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-phrase]');
+    if (button) addItems(button.dataset.phrase);
+  });
+
+  render();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js').catch(() => {}));
+  }
+})();
+</script>
+</body>
+</html>
