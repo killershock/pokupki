@@ -2,8 +2,8 @@
 Add-Type -AssemblyName System.Drawing
 
 $here = $PSScriptRoot
-$top = [System.Drawing.Color]::FromArgb(255, 194, 88, 58)
-$bottom = [System.Drawing.Color]::FromArgb(255, 168, 65, 42)
+$top = [System.Drawing.Color]::FromArgb(255, 47, 138, 102)
+$bottom = [System.Drawing.Color]::FromArgb(255, 28, 96, 71)
 $cream = [System.Drawing.Color]::FromArgb(255, 255, 246, 234)
 
 function New-RoundRect([double]$x, [double]$y, [double]$w, [double]$h, [double]$r) {
