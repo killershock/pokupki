@@ -1,5 +1,5 @@
 // sw.js — офлайн-режим списка покупок.
-const CACHE = 'pokupki-v3';
+const CACHE = 'pokupki-v4';
 const SHELL = [
   './',
   './index.html',

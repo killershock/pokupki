@@ -196,9 +196,38 @@
   .btn.primary { background: var(--accent); color: #fff; }
   .btn.ghost { background: #f2f5f3; color: var(--ink-soft); }
 
+  .flash {
+    position: fixed;
+    left: 50%;
+    bottom: calc(128px + var(--safe-bottom));
+    z-index: 55;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px 12px 12px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    box-shadow: 0 18px 34px rgba(22, 33, 27, 0.16);
+    opacity: 0;
+    transform: translate(-50%, 16px) scale(0.97);
+    transition: opacity 0.2s ease, transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+  .flash.is-on { opacity: 1; transform: translate(-50%, 0) scale(1); }
+  .flash-ico {
+    width: 32px; height: 32px; border-radius: 10px;
+    background: var(--accent-soft); color: var(--accent);
+    display: grid; place-items: center;
+  }
+  .flash-text b { display: block; font-size: 13.5px; font-weight: 600; }
+  .flash-text small {
+    display: block; margin-top: 2px; font-size: 10px;
+    letter-spacing: 0.8px; text-transform: uppercase; color: var(--muted);
+  }
+
   .toast {
-    position: fixed; left: 50%; bottom: calc(130px + var(--safe-bottom)); transform: translateX(-50%); z-index: 60;
-    max-width: min(440px, calc(100vw - 40px)); padding: 11px 15px;
+    position: fixed; left: 50%; bottom: calc(130px + var(--safe-bottom)); transform: translateX(-50%); z-index: 60;    max-width: min(440px, calc(100vw - 40px)); padding: 11px 15px;
     background: #1e2a23; color: #eef5f0; border-radius: 12px;
     box-shadow: 0 14px 30px rgba(22, 33, 27, 0.24);
     font-size: 12.5px; line-height: 1.45; text-align: center;
@@ -267,6 +296,16 @@
       <button class="btn ghost" id="cancel" type="button">Отмена</button>
       <button class="btn primary" id="done" type="button">Готово</button>
     </div>
+  </div>
+</div>
+
+<div class="flash" id="flash" aria-hidden="true">
+  <div class="flash-ico" id="flash-ico">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.6 4.6L19 7.6"/></svg>
+  </div>
+  <div class="flash-text">
+    <b id="flash-title"></b>
+    <small id="flash-meta"></small>
   </div>
 </div>
 
@@ -387,6 +426,21 @@
     toastTimer = setTimeout(() => toastEl.classList.add('is-hidden'), 2600);
   }
 
+  const flashEl = $('#flash');
+  const flashTitle = $('#flash-title');
+  const flashMeta = $('#flash-meta');
+  let flashTimer = null;
+
+  function showFlash(title, meta) {
+    flashTitle.textContent = title;
+    flashMeta.textContent = meta;
+    flashEl.classList.remove('is-on');
+    void flashEl.offsetWidth;
+    flashEl.classList.add('is-on');
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => flashEl.classList.remove('is-on'), 1700);
+  }
+
   // ---------- действия ----------
   function addItems(raw) {
     const parsed = parseItems(raw);
@@ -396,7 +450,12 @@
     }
     items = items.concat(parsed);
     render();
-    toast(parsed.length === 1 ? `Добавил: ${parsed[0].text}` : `Добавил ${parsed.length} пункта`);
+    if (parsed.length === 1) {
+      showFlash(parsed[0].text, parsed[0].qty || 'в список');
+    } else {
+      const names = parsed.slice(0, 3).map((item) => item.text).join(', ');
+      showFlash(`Добавлено: ${parsed.length}`, names + (parsed.length > 3 ? '…' : ''));
+    }
   }
 
   function onListClick(event) {
