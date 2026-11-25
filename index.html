@@ -126,6 +126,19 @@
     color: var(--muted); text-decoration: underline; text-underline-offset: 3px;
   }
 
+  .clear-all {
+    display: block; margin: 26px auto 0; padding: 11px 18px;
+    border: 1px solid var(--line); border-radius: 12px;
+    background: var(--card); color: var(--muted);
+    font-size: 12.5px; font-weight: 600;
+    transition: background .18s ease, color .18s ease, border-color .18s ease, transform .12s ease;
+  }
+  .clear-all:active { transform: scale(.97); }
+  .clear-all.armed {
+    background: #fdecea; border-color: #f3c3bb; color: #b4472e;
+    animation: bump .3s ease;
+  }
+
   /* ---------- ввод ---------- */
   .composer {
     position: fixed; left: 0; right: 0; bottom: 0; max-width: 520px; margin: 0 auto;
@@ -229,6 +242,8 @@
     <ul class="list" id="list-done"></ul>
     <button class="clear-done" id="clear-done" type="button">убрать купленное</button>
   </section>
+
+  <button class="clear-all is-hidden" id="clear-all" type="button">очистить весь список</button>
 </div>
 
 <div class="composer">
@@ -354,6 +369,10 @@
     }
 
     $('#today').textContent = 'сегодня, ' + new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+
+    clearAllBtn.classList.toggle('is-hidden', items.length === 0);
+    if (!items.length) resetClear();
+
     save();
   }
 
@@ -411,6 +430,31 @@
     items = items.filter((i) => !i.done);
     render();
     toast('Убрал купленное');
+  });
+
+  const clearAllBtn = $('#clear-all');
+  let clearArmed = false;
+  let clearTimer = null;
+
+  function resetClear() {
+    clearArmed = false;
+    if (clearTimer) { clearTimeout(clearTimer); clearTimer = null; }
+    clearAllBtn.classList.remove('armed');
+    clearAllBtn.textContent = 'очистить весь список';
+  }
+
+  clearAllBtn.addEventListener('click', () => {
+    if (!clearArmed) {
+      clearArmed = true;
+      clearAllBtn.classList.add('armed');
+      clearAllBtn.textContent = 'точно очистить? нажми ещё раз';
+      clearTimer = setTimeout(resetClear, 3200);
+      return;
+    }
+    items = [];
+    resetClear();
+    render();
+    toast('Список очищен');
   });
 
   inputEl.addEventListener('keydown', (event) => {
